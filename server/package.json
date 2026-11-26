@@ -1,0 +1,17 @@
+{
+  "name": "@planehunt/server",
+  "private": true,
+  "version": "0.1.0",
+  "description": "絕對機密裁判後端：本機為 Node HTTP + SSE；上線為 Vercel Functions + Firestore",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch --clear-screen=false src/dev-server.ts",
+    "dev:firebase": "tsx watch --clear-screen=false src/dev-server.ts --firebase",
+    "test": "tsx --test test/*.test.ts",
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@planehunt/shared": "*",
+    "firebase-admin": "^14.5.1"
+  }
+}

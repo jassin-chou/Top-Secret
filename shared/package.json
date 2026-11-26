@@ -1,0 +1,14 @@
+{
+  "name": "@planehunt/shared",
+  "private": true,
+  "version": "0.1.0",
+  "description": "前後端共用的遊戲規則引擎（純函式、無相依套件）",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "test": "tsx --test test/*.test.ts",
+    "typecheck": "tsc -p tsconfig.json"
+  }
+}

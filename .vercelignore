@@ -1,0 +1,12 @@
+# 用 Vercel CLI 上傳時略過的檔案（Vercel 會自己 npm install 並重新建置）
+node_modules
+.vercel
+web/dist
+server/.vercel-fn
+e2e/screens
+*.log
+.env.local
+.env.production
+web/.env.production
+*firebase-adminsdk*.json
+service-account*.json

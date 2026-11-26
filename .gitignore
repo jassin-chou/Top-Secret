@@ -1,0 +1,17 @@
+node_modules/
+dist/
+dist-*/
+*.log
+.DS_Store
+.env.local
+.env.production
+web/.env.production
+firebase-debug.log
+firestore-debug.log
+ui-debug.log
+e2e/screens/
+.vercel/
+server/.vercel-fn/
+# Firebase 服務帳戶金鑰絕對不要放進 Git
+*firebase-adminsdk*.json
+service-account*.json

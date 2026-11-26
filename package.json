@@ -1,0 +1,35 @@
+{
+  "name": "plane-hunt",
+  "private": true,
+  "version": "0.1.0",
+  "description": "絕對機密 Top Secret：尋機頭、海戰棋、幾A幾B 線上雙人對戰",
+  "type": "module",
+  "workspaces": [
+    "shared",
+    "server",
+    "web"
+  ],
+  "engines": {
+    "node": "22.x"
+  },
+  "scripts": {
+    "dev": "concurrently -k -n api,web -c blue,magenta \"npm run dev -w server\" \"npm run dev -w web\"",
+    "dev:firebase": "concurrently -k -n emu,api,web -c yellow,blue,magenta \"npx --yes firebase-tools@15 emulators:start --project demo-planehunt\" \"npm run dev:firebase -w server\" \"npm run dev:firebase -w web\"",
+    "test": "npm run test -w shared && npm run test -w server",
+    "typecheck": "npm run typecheck -w shared && npm run typecheck -w server && npm run typecheck -w web",
+    "build": "npm run build -w web",
+    "vercel-build": "node scripts/build-vercel.mjs",
+    "e2e": "node e2e/play.mjs"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.7",
+    "@vercel/nft": "^1.11.15",
+    "concurrently": "^10.0.7",
+    "esbuild": "^0.28.2",
+    "tsx": "^4.23.15",
+    "typescript": "^5.9.3"
+  },
+  "overrides": {
+    "@grpc/grpc-js": "^1.14.7"
+  }
+}

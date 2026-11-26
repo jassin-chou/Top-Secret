@@ -1,0 +1,27 @@
+{
+  "name": "@planehunt/web",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "dev:firebase": "vite --mode firebase",
+    "build": "tsc -p tsconfig.json && vite build",
+    "build:firebase-check": "vite build --mode firebase --outDir dist-firebase-check",
+    "preview": "vite preview",
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@fontsource/huninn": "^5.3.1",
+    "@planehunt/shared": "*",
+    "firebase": "^13.4.0",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8"
+  },
+  "devDependencies": {
+    "@types/react": "^19.3.3",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.3.0",
+    "vite": "^8.3.8"
+  }
+}

@@ -1,0 +1,25 @@
+rules_version = '2';
+
+// 前端只能「讀」，而且只能讀單一文件（不能列出所有房間）。
+// 所有寫入都由後端（Azure Functions，Admin SDK 不受 rules 限制）負責，玩家無法竄改棋局。
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // 公開棋局狀態：知道房號、且已匿名登入就能讀
+    match /games/{gameId} {
+      allow get: if request.auth != null;
+      allow list, write: if false;
+
+      // 飛機位置：只有本人讀得到，對手打開 DevTools 也看不到
+      match /private/{uid} {
+        allow get: if request.auth != null && request.auth.uid == uid;
+        allow list, write: if false;
+      }
+    }
+
+    // 對戰紀錄 users/{uid}/history 只透過後端讀寫，前端直接讀也不開放（由下面的規則一律拒絕）
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
