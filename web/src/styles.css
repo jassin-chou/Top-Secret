@@ -1821,14 +1821,16 @@ input {
 
 .board-caption {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: 8px 12px;
   min-height: 2rem;
 }
 
 .board-caption h2 {
   font-size: var(--step-1);
+  margin-right: auto;
 }
 
 .mine .board-caption h2 {
@@ -2092,7 +2094,9 @@ input {
 }
 
 .create-status {
-  max-width: 34rem;
+  /* 跟著文字長度，放得下就一行顯示；太長或手機才換行 */
+  width: fit-content;
+  max-width: 100%;
   padding: 8px 14px;
   border-radius: var(--radius);
   background: rgba(34, 63, 148, 0.07);

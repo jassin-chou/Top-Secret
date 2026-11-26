@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import {
   cellKey,
   coordLabel,
+  deduceFoundPlanes,
   opponentOf,
   pieceShapes,
   shipName,
@@ -21,7 +22,7 @@ import { FleetStatus } from '../components/Fleet';
 import { TurnBanner, shortName, type TurnEvent, type TurnKind } from '../components/TurnBanner';
 import { RematchActions, ResultModal, useResultModal } from '../components/ResultModal';
 import { PokeButton } from '../components/Chat';
-import { useCoarsePointer, useSessionState } from '../lib/util';
+import { useCoarsePointer, useLocalState, useSessionState } from '../lib/util';
 import type { Act } from './Room';
 
 /** 一發的結果文字；onMe = 這一發是打在我的棋盤上 */
@@ -104,6 +105,9 @@ export function Battle({ game, me, uid, act, onLeave, roomLabel }: Props) {
   const [cursor, setCursor] = useState<Cell | null>(null);
   const [firing, setFiring] = useState(false);
   const [markMode, setMarkMode] = useState(false);
+  // 飛機版：找到機頭後，自動推理那架飛機的位置並標出周圍一定是空的格子（偏好記在這台裝置上）
+  const [autoMark, setAutoMark] = useLocalState('planehunt.autoMark', true);
+  const canAutoMark = settings.mode === 'plane' && total > 1;
   // 推理筆記只存在自己的瀏覽器分頁，不會傳給伺服器
   const [marks, setMarks] = useSessionState<string[]>(`planehunt.marks.${game.id}.${game.round}`, []);
   const markSet = new Set(marks);
@@ -187,8 +191,17 @@ export function Battle({ game, me, uid, act, onLeave, roomLabel }: Props) {
   const mySunk = isShip ? (game.sunk?.[uid] ?? []) : [];
   const oppSunk = isShip ? (game.sunk?.[opp] ?? []) : [];
   const sunkPlaced = mySunk.map((p) => ({ plane: p, shape: shapes[p.k] }));
+  const deduced = useMemo(
+    () => (canAutoMark && autoMark && settings.mode === 'plane' ? deduceFoundPlanes(settings, myShots) : []),
+    [canAutoMark, autoMark, settings, myShots],
+  );
+  const knownPlanes = finished ? [] : deduced.flatMap((d) => (d.known ? [d.known] : []));
   const emptyAround =
-    isShip && total > 1 ? surroundingCells(sunkPlaced, size).filter((c) => !shotAt.has(cellKey(c.x, c.y))) : [];
+    isShip && total > 1
+      ? surroundingCells(sunkPlaced, size).filter((c) => !shotAt.has(cellKey(c.x, c.y)))
+      : finished
+        ? []
+        : [...new Map(deduced.flatMap((d) => d.empty).map((c) => [cellKey(c.x, c.y), c])).values()];
 
   return (
     <section className="battle">
@@ -262,6 +275,17 @@ export function Battle({ game, me, uid, act, onLeave, roomLabel }: Props) {
                 {markMode ? '標記模式：開' : '標記模式'}
               </button>
             )}
+            {playing && canAutoMark && (
+              <button
+                type="button"
+                className={`chip${autoMark ? ' is-on' : ''}`}
+                aria-pressed={autoMark}
+                title="找到機頭後，推得出位置的飛機會框起來，周圍一定是空的格子會標上淡淡的點"
+                onClick={() => setAutoMark(!autoMark)}
+              >
+                {autoMark ? '自動標記：開' : '自動標記：關'}
+              </button>
+            )}
           </div>
           <Board
             size={size}
@@ -284,6 +308,9 @@ export function Battle({ game, me, uid, act, onLeave, roomLabel }: Props) {
             {sunkPlaced.map((sp, i) => (
               <PieceShape key={`s${i}`} mode={mode} plane={sp.plane} shape={sp.shape} variant="sunk" />
             ))}
+            {knownPlanes.map((kp, i) => (
+              <PieceShape key={`k${i}`} mode={mode} plane={kp.plane} shape={kp.shape} variant="sunk" headLabel={false} />
+            ))}
             {emptyAround.map((c) => (
               <EmptyHint key={`e${c.x},${c.y}`} cell={c} />
             ))}
@@ -300,7 +327,13 @@ export function Battle({ game, me, uid, act, onLeave, roomLabel }: Props) {
             {playing
               ? coarse
                 ? `點一下瞄準，再點同一格開火。開「標記模式」可以記下你覺得沒有${noun}的格子。`
-                : `點格子開火。右鍵可以做記號，幫自己推理。${isShip && total > 1 ? '擊沉的船周圍會自動標上淡淡的點，那些格子一定是空的。' : ''}`
+                : `點格子開火。右鍵可以做記號，幫自己推理。${
+                    isShip && total > 1
+                      ? '擊沉的船周圍會自動標上淡淡的點，那些格子一定是空的。'
+                      : canAutoMark && autoMark
+                        ? '找到機頭後會自動推理：推得出位置的飛機會用紅筆框起來，淡淡的點是一定空的格子。'
+                        : ''
+                  }`
               : finished
                 ? `紅色虛線是${oppName}藏${noun}的位置。`
                 : ''}

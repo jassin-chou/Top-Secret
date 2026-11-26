@@ -303,6 +303,21 @@ try {
       const before = await A.locator('.enemy .shot').count();
       await clickCell(A, 0, m.x, m.y);
       await A.waitForFunction((n) => document.querySelectorAll('.enemy .shot').length > n, before);
+      if (aMoves.length === 1) {
+        // 剛打中第一個機頭：自動標記預設開著，可以關掉、再打開（偏好記在這台裝置）
+        const hints = () => A.locator('.enemy .empty-hint, .enemy .plane--sunk').count();
+        await A.getByRole('button', { name: '自動標記：開' }).waitFor();
+        const on = await hints();
+        await shot(A, '07b-auto-mark');
+        await A.getByRole('button', { name: '自動標記：開' }).click();
+        await A.getByRole('button', { name: '自動標記：關' }).waitFor();
+        if ((await hints()) !== 0) throw new Error('關掉自動標記後不該有自動的點');
+        if (!(await A.evaluate(() => localStorage.getItem('planehunt.autoMark')))) throw new Error('偏好要記在這台裝置');
+        await A.getByRole('button', { name: '自動標記：關' }).click();
+        await A.getByRole('button', { name: '自動標記：開' }).waitFor();
+        if ((await hints()) !== on) throw new Error('打開自動標記後要恢復');
+        step(`自動標記：打中第一個機頭後標出 ${on} 個提示，可以開關`);
+      }
       if (!tookA && turns >= 3) {
         tookA = true;
         await shot(A, '07-battle-desktop');

@@ -578,3 +578,40 @@ test('chat: quick lines, typed text, pokes and rate limits', () => {
   assert.equal(rec.pub.chat!.length, CHAT_KEEP);
   assert.equal(rec.pub.chat!.at(-1)!.n, 44);
 });
+
+test('plane auto-mark: deduce found planes from your own shots', async () => {
+  const { deduceFoundPlanes } = await import('../src/index.js');
+  const mini = { name: '迷你機', cells: [{ x: 0, y: 0 }, { x: 0, y: 1 }, { x: -1, y: 1 }, { x: 1, y: 1 }, { x: 0, y: 2 }] };
+  const settings = { mode: 'plane' as const, size: 7, planes: 2, shape: mini };
+  const key = (c: { x: number; y: number }) => `${c.x},${c.y}`;
+
+  // 一架飛機時找到機頭就贏了，不推理
+  assert.deepEqual(deduceFoundPlanes({ ...settings, planes: 1 }, [{ x: 3, y: 3, r: 'head' }]), []);
+
+  // 機頭貼著左邊：只有機頭朝左（機身往右延伸）放得下
+  const [edge] = deduceFoundPlanes(settings, [{ x: 0, y: 3, r: 'head' }]);
+  assert.equal(edge.known?.plane.dir, 'left');
+  const empty = new Set(edge.empty.map(key));
+  assert.ok(empty.has('0,2') && empty.has('3,3') && empty.has('2,1'));
+  assert.ok(!empty.has('1,3') && !empty.has('0,3'), '飛機自己的格子不是空的');
+
+  // 中間的機頭：四個方向都可能 → 不確定；沒打中的格子把其他三個方向排除掉
+  const [mid] = deduceFoundPlanes(settings, [{ x: 3, y: 3, r: 'head' }]);
+  assert.equal(mid.options.length, 4);
+  assert.equal(mid.known, null);
+  const [solved] = deduceFoundPlanes(settings, [
+    { x: 3, y: 3, r: 'head' },
+    { x: 3, y: 4, r: 'miss' },
+    { x: 3, y: 2, r: 'miss' },
+    { x: 4, y: 3, r: 'miss' },
+  ]);
+  assert.equal(solved.known?.plane.dir, 'right');
+  assert.ok(solved.empty.every((c) => !(c.x === 3 && c.y === 4)), '打過的格子不用再標');
+
+  // 打中的機身貼在某個方向旁邊（但不是那個方向的機身）→ 那個方向不可能
+  const [byBody] = deduceFoundPlanes(settings, [
+    { x: 3, y: 3, r: 'head' },
+    { x: 3, y: 4, r: 'body' }, // 機頭正下方是機身：只有朝上（機身在下面）說得通
+  ]);
+  assert.equal(byBody.known?.plane.dir, 'up');
+});

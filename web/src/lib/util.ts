@@ -155,6 +155,27 @@ export function useCoarsePointer(): boolean {
 }
 
 /** 存在 sessionStorage 的狀態（推理筆記用） */
+/** 記在這台裝置上的偏好（例如自動標記開或關） */
+export function useLocalState<T>(key: string, initial: T): [T, (v: T) => void] {
+  const [value, setValue] = useState<T>(() => {
+    try {
+      const raw = localStorage.getItem(key);
+      return raw ? (JSON.parse(raw) as T) : initial;
+    } catch {
+      return initial;
+    }
+  });
+  const set = (v: T) => {
+    setValue(v);
+    try {
+      localStorage.setItem(key, JSON.stringify(v));
+    } catch {
+      // ignore
+    }
+  };
+  return [value, set];
+}
+
 export function useSessionState<T>(key: string, initial: T): [T, (v: T) => void] {
   const read = () => {
     try {

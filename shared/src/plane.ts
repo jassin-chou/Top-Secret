@@ -3,7 +3,7 @@
  * 飛機版與海戰棋共用，差別只在「每個棋子是什麼形狀」（pieceShapes）。
  */
 import { CLASSIC_SHAPE, shapeBounds, shipShape } from './shapes.js';
-import type { BoardSettings, Cell, Dir, Plane, PlaneCell, PlaneSettings, Settings, ShapeDef } from './types.js';
+import type { BoardSettings, Cell, Dir, Plane, PlaneCell, PlaneSettings, Settings, ShapeDef, Shot, ShotResult } from './types.js';
 
 export const DIRS: Dir[] = ['up', 'right', 'down', 'left'];
 
@@ -374,4 +374,96 @@ export function surroundingCells(pieces: Placed[], size: number): Cell[] {
     }
   }
   return [...out.values()];
+}
+
+// ---------------------------------------------------------------------------
+// 飛機版「自動標記」：打到機頭之後，只用自己看得到的資訊推理
+// ---------------------------------------------------------------------------
+
+export interface FoundPlane {
+  /** 打中的機頭 */
+  head: Cell;
+  /** 還有可能的擺法（機頭固定，最多四個朝向） */
+  options: Placed[];
+  /** 只剩一種擺法時，就是它 */
+  known: Placed | null;
+  /** 不管是哪一種擺法，一定是空的格子（還沒開過火的） */
+  empty: Cell[];
+}
+
+/** 機頭在 head、朝 dir 的那架飛機 */
+function planeWithHeadAt(head: Cell, dir: Dir, shape: ShapeDef): Plane {
+  const h = planeCells({ x: 0, y: 0, dir }, shape)[0];
+  return { x: head.x - h.x, y: head.y - h.y, dir };
+}
+
+/**
+ * 根據自己打出去的砲推理每架被找到的飛機：
+ * - 飛機的格子不會是「沒打中」，也不會是另一個機頭
+ * - 飛機之間完全分開，所以任何打中的格子（機頭或機身）都不會貼著別架飛機
+ * 只有一種擺法的飛機會再拿來排除其他飛機的擺法，反覆到沒有變化為止。
+ * 只有一架飛機時，找到機頭就贏了，不需要推理。
+ */
+export function deduceFoundPlanes(settings: PlaneSettings, shots: Array<Pick<Shot, 'x' | 'y' | 'r'>>): FoundPlane[] {
+  if (settings.planes < 2) return [];
+  const { size, shape } = settings;
+  const result = new Map<number, ShotResult>();
+  for (const s of shots) result.set(cellKey(s.x, s.y), s.r);
+  const heads = shots.filter((s) => s.r === 'head').map(({ x, y }) => ({ x, y }));
+  const known = new Map<number, Placed>(); // 機頭 → 確定的擺法
+
+  const optionsFor = (head: Cell): Placed[] => {
+    const hk = cellKey(head.x, head.y);
+    const others = [...known.entries()].filter(([k]) => k !== hk).map(([, p]) => p);
+    return DIRS.map((dir) => ({ plane: planeWithHeadAt(head, dir, shape), shape })).filter((cand) => {
+      const cells = planeCells(cand.plane, cand.shape);
+      if (!cells.every((c) => inBounds(c, size))) return false;
+      const own = new Set(cells.map((c) => cellKey(c.x, c.y)));
+      for (const c of cells) {
+        const r = result.get(cellKey(c.x, c.y));
+        if (r === 'miss' || (r === 'head' && cellKey(c.x, c.y) !== hk)) return false;
+        for (const [dx, dy] of TOUCH) {
+          const k = cellKey(c.x + dx, c.y + dy);
+          const nr = result.get(k);
+          if (!own.has(k) && (nr === 'head' || nr === 'body')) return false;
+        }
+      }
+      return placementConflict(settings, others, cand) === null;
+    });
+  };
+
+  for (let changed = true; changed; ) {
+    changed = false;
+    for (const h of heads) {
+      const k = cellKey(h.x, h.y);
+      if (known.has(k)) continue;
+      const opts = optionsFor(h);
+      if (opts.length === 1) {
+        known.set(k, opts[0]);
+        changed = true;
+      }
+    }
+  }
+
+  return heads.map((head) => {
+    const k = cellKey(head.x, head.y);
+    const fixed = known.get(k);
+    const options = fixed ? [fixed] : optionsFor(head);
+    let empty: Cell[] = [];
+    if (options.length) {
+      const counts = new Map<number, { cell: Cell; n: number }>();
+      for (const o of options) {
+        for (const c of surroundingCells([o], size)) {
+          const ck = cellKey(c.x, c.y);
+          const e = counts.get(ck);
+          if (e) e.n++;
+          else counts.set(ck, { cell: c, n: 1 });
+        }
+      }
+      empty = [...counts.entries()]
+        .filter(([ck, e]) => e.n === options.length && !result.has(ck))
+        .map(([, e]) => e.cell);
+    }
+    return { head, options, known: fixed ?? null, empty };
+  });
 }
