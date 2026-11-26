@@ -4,6 +4,8 @@
    ------------------------------------------------------------ */
 
 :root {
+  /* 大廳（首頁、選玩法、設定、紀錄、排行榜）的內容寬度 */
+  --lobby-w: 1000px;
   --paper: #ffffff;
   /* 棋盤保留淡淡的方格紙色，跟白底區分 */
   --paper-board: #f6f9f4;
@@ -169,7 +171,7 @@ p {
 
 /* 大廳的內容比較窄，頂部的字標跟著對齊 */
 .page--lobby .topbar-inner {
-  max-width: 820px;
+  max-width: var(--lobby-w);
 }
 
 .loading {
@@ -762,7 +764,7 @@ input {
 .step {
   display: grid;
   gap: 28px;
-  max-width: 820px;
+  max-width: var(--lobby-w);
   margin: 0 auto;
   padding-top: 16px;
 }
@@ -2999,7 +3001,7 @@ html.is-poked .content {
 .history {
   display: grid;
   gap: 22px;
-  max-width: 820px;
+  max-width: var(--lobby-w);
   margin: 0 auto;
   padding-top: 16px;
 }
@@ -3552,7 +3554,7 @@ html.is-poked .content {
 .leaderboard {
   display: grid;
   gap: 22px;
-  max-width: 820px;
+  max-width: var(--lobby-w);
   margin: 0 auto;
   padding-top: 16px;
 }
@@ -3879,4 +3881,62 @@ html.is-poked .content {
   .medal-card {
     padding: 12px 8px 10px;
   }
+}
+
+/* ---------- 暱稱 ---------- */
+
+.modal--narrow {
+  width: min(440px, calc(100vw - 32px));
+}
+
+.nickname-form .field {
+  width: 100%;
+}
+
+.nickname-form .muted {
+  margin: 0;
+}
+
+.field-error {
+  font-size: var(--step--1);
+  color: var(--red);
+}
+
+.nickname-chip {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 4px 14px;
+  border: 1.5px solid var(--grid-strong);
+  border-radius: 999px;
+  background: #ffffff;
+  color: var(--text);
+  font: inherit;
+  font-size: var(--step--1);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.nickname-chip:hover {
+  border-color: var(--ink);
+}
+
+.nickname-chip-name {
+  max-width: 12em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.nickname-chip-edit {
+  color: var(--ink);
+  border-bottom: 1px solid currentColor;
+}
+
+.join-as {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 10px;
+  margin: 0;
+  color: var(--muted);
 }

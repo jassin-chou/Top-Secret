@@ -4,7 +4,8 @@ import { ShapePreview } from '../components/ShapePreview';
 import { ChatWidget } from '../components/Chat';
 import { FleetPreview } from '../components/Fleet';
 import type { Backend, ConnectionState } from '../net/backend';
-import { copyText, inviteLink, loadName, prettyCode, saveName } from '../lib/util';
+import { copyText, inviteLink, prettyCode } from '../lib/util';
+import { NicknameChip, useNickname } from '../components/Nickname';
 import { useToast } from '../components/Toasts';
 import { ConfirmButton } from '../components/ConfirmButton';
 import { Placement } from './Placement';
@@ -189,7 +190,8 @@ function Waiting({ game, backend, onLeave }: { game: GameDoc; backend: Backend; 
 }
 
 function JoinPrompt({ game, act }: { game: GameDoc; act: Act }) {
-  const [name, setName] = useState(loadName);
+  const { name: saved, set: saveNickname } = useNickname();
+  const [name, setName] = useState(saved);
   const [busy, setBusy] = useState(false);
   const toast = useToast();
   const host = game.players[game.hostId]?.name ?? '朋友';
@@ -206,9 +208,9 @@ function JoinPrompt({ game, act }: { game: GameDoc; act: Act }) {
   }
   const submit = async (e: FormEvent) => {
     e.preventDefault();
-    const n = name.trim();
+    const n = (saved || name).trim();
     if (!n) return toast('先取個暱稱，對手才知道你是誰');
-    saveName(n);
+    if (!saved) saveNickname(n);
     setBusy(true);
     await act('join', { name: n });
     setBusy(false);
@@ -219,10 +221,16 @@ function JoinPrompt({ game, act }: { game: GameDoc; act: Act }) {
         {host}找你來玩{game.settings.mode === 'ship' ? '海戰棋' : game.settings.mode === 'ab' ? '幾A幾B' : '尋機頭'}
       </h1>
       <RuleSummary settings={game.settings} />
-      <div className="field">
-        <label htmlFor="join-name">你的暱稱</label>
-        <input id="join-name" value={name} maxLength={12} autoFocus onChange={(e) => setName(e.target.value)} />
-      </div>
+      {saved ? (
+        <p className="join-as">
+          你會用這個暱稱加入 <NicknameChip />
+        </p>
+      ) : (
+        <div className="field">
+          <label htmlFor="join-name">先取個暱稱</label>
+          <input id="join-name" value={name} maxLength={12} autoFocus onChange={(e) => setName(e.target.value)} />
+        </div>
+      )}
       <button type="submit" className="btn" disabled={busy}>
         {busy ? '加入中…' : '加入房間'}
       </button>

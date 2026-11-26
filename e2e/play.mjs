@@ -20,6 +20,14 @@ for (const [name, p] of [['A', A], ['B', B]]) {
   p.on('console', (m) => m.type() === 'error' && !m.text().includes('fonts.g') && console.error(`[${name} console]`, m.text()));
 }
 
+/** 在暱稱彈窗裡取名字 */
+async function setNick(page, name) {
+  const dlg = page.getByRole('dialog', { name: /暱稱/ });
+  await dlg.getByLabel('暱稱', { exact: true }).fill(name);
+  await dlg.getByRole('button', { name: /開始玩|儲存/ }).click();
+  await dlg.waitFor({ state: 'hidden' });
+}
+
 const shot = (p, name) => p.screenshot({ path: `${OUT}${name}.png`, fullPage: true });
 const step = (msg) => console.log('•', msg);
 
@@ -62,19 +70,42 @@ try {
   step('A 打開首頁');
   await A.goto(BASE);
   await A.getByRole('heading', { name: '絕對機密' }).waitFor();
+  step('第一次來：自動跳出取暱稱的彈窗；空白不能送出');
+  await A.getByRole('dialog', { name: '先取個暱稱' }).waitFor();
+  await A.waitForTimeout(300);
+  await shot(A, '01a-nickname-dialog');
+  await A.getByRole('button', { name: '開始玩' }).click();
+  await A.getByText('暱稱不能空白').waitFor();
+  await A.getByRole('button', { name: '關閉' }).click();
   await shot(A, '01-home-desktop');
   await B.goto(BASE);
-  await B.getByRole('heading', { name: '絕對機密' }).waitFor();
+  await B.getByRole('dialog', { name: '先取個暱稱' }).waitFor();
+  await B.waitForTimeout(300);
   await shot(B, '01-home-mobile');
 
-  step('A 沒填暱稱就按開新房間 → 應該提示');
+  step('A 關掉彈窗後按開新房間 → 彈窗再出現，取好名字直接進到選玩法');
+  if (await A.getByLabel('暱稱', { exact: true }).count()) throw new Error('首頁不該再有暱稱欄位');
   await A.getByRole('button', { name: /開新房間/ }).click();
-  await A.getByText('先取個暱稱，對手才知道你是誰').first().waitFor();
+  await setNick(A, '阿明');
+  await A.getByRole('heading', { name: '阿明，想玩哪一種？' }).waitFor();
+  await A.getByRole('button', { name: /暱稱：阿明/ }).waitFor();
 
-  step('A 填暱稱 → 開新房間 → 選玩法頁，打開「飛機版怎麼玩」');
-  await A.getByLabel('先取個暱稱').fill('阿明');
+  step('重新整理首頁：記得暱稱，不會再跳彈窗');
+  await A.goto(BASE);
+  await A.getByRole('heading', { name: '絕對機密' }).waitFor();
+  await A.waitForTimeout(400);
+  if (await A.getByRole('dialog').count()) throw new Error('取過暱稱後不該再跳彈窗');
   await A.getByRole('button', { name: /開新房間/ }).click();
   await A.getByRole('heading', { name: '阿明，想玩哪一種？' }).waitFor();
+
+  step('在選玩法頁改暱稱');
+  await A.getByRole('button', { name: /暱稱：阿明/ }).click();
+  await setNick(A, '阿明明');
+  await A.getByRole('heading', { name: '阿明明，想玩哪一種？' }).waitFor();
+  await A.getByRole('button', { name: /暱稱：阿明明/ }).click();
+  await setNick(A, '阿明');
+  await A.getByRole('heading', { name: '阿明，想玩哪一種？' }).waitFor();
+  step('打開「飛機版怎麼玩」');
   await A.getByRole('button', { name: '飛機版怎麼玩' }).click();
   await A.getByRole('heading', { name: '飛機版怎麼玩' }).waitFor();
   await shot(A, '01c-howto');
@@ -161,7 +192,7 @@ try {
   await B.goto(invite);
   await B.getByText('阿明找你來玩尋機頭').waitFor();
   await shot(B, '03-join-mobile');
-  await B.getByLabel('你的暱稱').fill('小華');
+  await B.getByLabel('先取個暱稱').fill('小華');
   await B.getByRole('button', { name: '加入房間' }).click();
 
   // ---------- 擺放 ----------
@@ -325,7 +356,7 @@ try {
   await C.goto(`${BASE}#/r/${code}`);
   await C.getByText('這個房間已經有兩位玩家了').waitFor();
   await C.goto(BASE);
-  await C.getByLabel('先取個暱稱').fill('路人');
+  await setNick(C, '路人');
   await C.getByRole('button', { name: /加入朋友的房間/ }).click();
   await C.getByRole('heading', { name: '加入朋友的房間' }).waitFor();
   await shot(C, '11b-join-step');
@@ -341,7 +372,7 @@ try {
   const P = await ctxP.newPage();
   P.on('pageerror', (e) => console.error('[P pageerror]', e.message));
   await P.goto(BASE);
-  await P.getByLabel('先取個暱稱').fill('小美');
+  await setNick(P, '小美');
   await P.getByRole('button', { name: /開新房間/ }).click();
   await P.locator('.mode-big', { hasText: '海戰棋' }).click();
   await P.getByRole('heading', { name: '海戰棋設定' }).waitFor();
@@ -440,7 +471,7 @@ try {
   const Q = await (await browser.newContext({ viewport: { width: 1280, height: 900 } })).newPage();
   Q.on('pageerror', (e) => console.error('[Q pageerror]', e.message));
   await Q.goto(BASE);
-  await Q.getByLabel('先取個暱稱').fill('小安');
+  await setNick(Q, '小安');
   await Q.getByRole('button', { name: /開新房間/ }).click();
   await Q.getByRole('button', { name: '幾A幾B怎麼玩' }).click();
   await Q.getByRole('heading', { name: '幾A幾B怎麼玩' }).waitFor();
@@ -614,9 +645,13 @@ try {
 
   await G.getByRole('link', { name: '排行榜' }).click();
   await G.locator('.lb-row.is-me', { hasText: gToken.prefix }).waitFor();
-  await G.locator('.lb-row', { hasText: 'captain.lee' }).waitFor();
+  await G.locator('.lb-row', { hasText: 'captain.lee' }).first().waitFor();
   await G.locator('.lb-row.is-me .lb-rate', { hasText: '83' }).waitFor();
   await G.locator('.lb-row.is-me').getByRole('button', { name: /密碼破譯大師/ }).waitFor();
+  if ((await G.locator('.lb-row.is-me .medal-btn').count()) !== 3) throw new Error('名字後面最多顯示 3 面獎牌');
+  await G.locator('.lb-row.is-me .lb-more', { hasText: /^\+\d+$/ }).waitFor(); // 半夜跑會多一面「夜貓子」
+  const firstMedal = await G.locator('.lb-row.is-me .medal-btn').first().getAttribute('class');
+  if (!(await G.locator('.lb-row.is-me .medal-btn').first().locator('.medal--t4').count())) throw new Error(`最稀有的獎牌要排第一（${firstMedal}）`);
   await G.locator('.lb-row.is-me').getByRole('button', { name: /密碼破譯大師/ }).click();
   await G.locator('.toast', { hasText: '幾A幾B 跟真人連贏 5 場' }).waitFor();
   if (await G.locator('.lb-row', { hasText: '測試' }).count()) throw new Error('不該出現暱稱，要用 Gmail 前綴');

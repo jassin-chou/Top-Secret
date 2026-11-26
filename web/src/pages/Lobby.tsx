@@ -1,6 +1,6 @@
 /**
  * 大廳（分步驟）：
- *   1. StartStep   取暱稱，選「開新房間」或「加入朋友的房間」
+ *   1. StartStep   選「開新房間」或「加入朋友的房間」（第一次來會先跳出彈窗取暱稱）
  *   2. ModeStep    選玩法（飛機版 / 海戰棋），旁邊可以看「怎麼玩？」
  *   3. SetupStep   這個玩法的細項設定，開房間或跟電腦練習
  *   2'. JoinStep   輸入房號加入
@@ -9,7 +9,8 @@ import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
 import { CLASSIC_SHAPE, CODE_RE, type BotLevel, type GameMode, type GameView, type Settings } from '@planehunt/shared';
 import type { Backend } from '../net/backend';
 import { practiceBackend } from '../net/practiceBackend';
-import { APP_NAME, APP_NAME_EN, loadName, saveName } from '../lib/util';
+import { APP_NAME, APP_NAME_EN } from '../lib/util';
+import { NicknameChip, useNickname } from '../components/Nickname';
 import { useToast } from '../components/Toasts';
 import { PlaneExample } from '../components/Examples';
 import { HowToPlay } from '../components/HowToPlay';
@@ -47,13 +48,15 @@ function StepHeader({
         <button type="button" className="btn btn--quiet btn--small step-back" onClick={() => navigate(back)}>
           返回
         </button>
-        <ol className="step-trail" aria-label="步驟">
-          {steps.map((s, i) => (
-            <li key={s} className={i === current ? 'is-current' : i < current ? 'is-done' : ''} aria-current={i === current ? 'step' : undefined}>
-              {s}
-            </li>
-          ))}
-        </ol>
+        {steps.length > 1 && (
+          <ol className="step-trail" aria-label="步驟">
+            {steps.map((s, i) => (
+              <li key={s} className={i === current ? 'is-current' : i < current ? 'is-done' : ''} aria-current={i === current ? 'step' : undefined}>
+                {s}
+              </li>
+            ))}
+          </ol>
+        )}
       </div>
       <div className="step-title-row">
         <h1 className="step-title">{title}</h1>
@@ -63,36 +66,35 @@ function StepHeader({
   );
 }
 
-/** 後面幾步需要先有暱稱；沒有的話回到第一步 */
-function useRequireName(navigate: (p: string) => void) {
-  const toast = useToast();
-  const name = loadName().trim();
+/**
+ * 後面幾步需要暱稱：沒有的話（例如直接打開網址）就跳出彈窗。
+ * 回傳 withName：要用到暱稱的動作包一層，還沒取好就先問。
+ */
+function useRequireName() {
+  const { name, ask } = useNickname();
   useEffect(() => {
-    if (!name) {
-      toast('先取個暱稱，對手才知道你是誰', 'info');
-      navigate('/');
-    }
+    if (!name) ask();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-  return name;
+  const withName = (fn: (name: string) => void) => () => {
+    if (name) fn(name);
+    else ask();
+  };
+  return { name, withName };
 }
 
 // ---------------------------------------------------------------------------
 
 export function StartStep({ navigate }: LobbyProps) {
-  const toast = useToast();
-  const [name, setName] = useState(loadName);
+  const { name, ask } = useNickname();
 
-  const go = (path: string) => {
-    const n = name.trim();
-    if (!n) {
-      toast('先取個暱稱，對手才知道你是誰');
-      document.getElementById('nickname')?.focus();
-      return;
-    }
-    saveName(n);
-    navigate(path);
-  };
+  // 第一次來：先跳出彈窗取暱稱
+  useEffect(() => {
+    if (!name) ask();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const go = (path: string) => (name ? navigate(path) : ask(() => navigate(path)));
 
   return (
     <section className="step step--start">
@@ -109,18 +111,6 @@ export function StartStep({ navigate }: LobbyProps) {
         <div className="start-board">
           <PlaneExample />
         </div>
-      </div>
-
-      <div className="field field--big">
-        <label htmlFor="nickname">先取個暱稱</label>
-        <input
-          id="nickname"
-          value={name}
-          maxLength={12}
-          autoComplete="nickname"
-          placeholder="例如：阿明"
-          onChange={(e) => setName(e.target.value)}
-        />
       </div>
 
       <div className="choice-grid">
@@ -152,7 +142,7 @@ export function StartStep({ navigate }: LobbyProps) {
 // ---------------------------------------------------------------------------
 
 export function ModeStep({ navigate }: LobbyProps) {
-  const name = useRequireName(navigate);
+  const { name } = useRequireName();
   const [help, setHelp] = useState<GameMode | null>(null);
 
   const modes: Array<{ mode: GameMode; desc: string; art: ReactNode }> = [
@@ -192,10 +182,11 @@ export function ModeStep({ navigate }: LobbyProps) {
   return (
     <section className="step">
       <StepHeader
-        steps={['暱稱', '玩法', '設定']}
-        current={1}
+        steps={['玩法', '設定']}
+        current={0}
         back="/"
         title={name ? `${name}，想玩哪一種？` : '想玩哪一種？'}
+        aside={<NicknameChip />}
         navigate={navigate}
       />
       <div className="mode-grid">
@@ -224,11 +215,11 @@ export function ModeStep({ navigate }: LobbyProps) {
 
 export function SetupStep({ mode, backend, bootError, navigate }: LobbyProps & { mode: GameMode }) {
   const toast = useToast();
-  const name = useRequireName(navigate);
+  const { withName } = useRequireName();
   const [busy, setBusy] = useState(false);
   const [help, setHelp] = useState<GameMode | null>(null);
 
-  const create = async (settings: Settings) => {
+  const create = async (settings: Settings, name: string) => {
     if (!backend) {
       toast(bootError ? `連不上遊戲伺服器，暫時不能開房間。可以先跟電腦練習。` : '正在連線伺服器，請稍等一下再試');
       return;
@@ -245,7 +236,7 @@ export function SetupStep({ mode, backend, bootError, navigate }: LobbyProps & {
   };
 
   // 跟電腦練習完全在瀏覽器裡執行，不需要伺服器
-  const practice = async (settings: Settings, level: BotLevel) => {
+  const practice = async (settings: Settings, level: BotLevel, name: string) => {
     try {
       const v = await practiceBackend().call<GameView>('create', { name, settings, level });
       navigate(`/p/${v.game.id}`);
@@ -257,8 +248,8 @@ export function SetupStep({ mode, backend, bootError, navigate }: LobbyProps & {
   return (
     <section className="step step--setup">
       <StepHeader
-        steps={['暱稱', '玩法', '設定']}
-        current={2}
+        steps={['玩法', '設定']}
+        current={1}
         back="/new"
         title={`${MODE_NAME[mode]}設定`}
         aside={
@@ -270,7 +261,13 @@ export function SetupStep({ mode, backend, bootError, navigate }: LobbyProps & {
         navigate={navigate}
       />
       {bootError && <p className="conn-warning">連不上遊戲伺服器，暫時只能跟電腦練習。</p>}
-      <CreateRoom key={mode} mode={mode} busy={busy} onCreate={create} onPractice={practice} />
+      <CreateRoom
+        key={mode}
+        mode={mode}
+        busy={busy}
+        onCreate={(settings) => withName((n) => void create(settings, n))()}
+        onPractice={(settings, level) => withName((n) => void practice(settings, level, n))()}
+      />
       <HowToPlay mode={help} onClose={() => setHelp(null)} />
     </section>
   );
@@ -280,7 +277,7 @@ export function SetupStep({ mode, backend, bootError, navigate }: LobbyProps & {
 
 export function JoinStep({ backend, bootError, navigate }: LobbyProps) {
   const toast = useToast();
-  const name = useRequireName(navigate);
+  const { name, withName } = useRequireName();
   const [code, setCode] = useState('');
   const [busy, setBusy] = useState(false);
 
@@ -293,6 +290,10 @@ export function JoinStep({ backend, bootError, navigate }: LobbyProps) {
     }
     if (!backend) {
       toast(bootError ? '連不上遊戲伺服器，暫時不能加入房間' : '正在連線伺服器，請稍等一下再試');
+      return;
+    }
+    if (!name) {
+      withName(() => {})();
       return;
     }
     setBusy(true);
@@ -308,7 +309,7 @@ export function JoinStep({ backend, bootError, navigate }: LobbyProps) {
 
   return (
     <section className="step step--join">
-      <StepHeader steps={['暱稱', '加入房間']} current={1} back="/" title="加入朋友的房間" navigate={navigate} />
+      <StepHeader steps={[]} current={0} back="/" title="加入朋友的房間" aside={<NicknameChip />} navigate={navigate} />
       <form className="join-form" onSubmit={join}>
         <div className="field field--big">
           <label htmlFor="room-code">房號</label>

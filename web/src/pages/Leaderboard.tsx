@@ -24,7 +24,8 @@ interface Data {
 }
 
 const SCOPES: BoardScope[] = ['all', 'plane', 'ship', 'ab'];
-const SHOW_MEDALS = 5;
+/** 名字後面最多顯示幾面（最稀有的排前面），其餘顯示 +N */
+const SHOW_MEDALS = 3;
 
 function MedalStrip({ ids }: { ids: MedalId[] }) {
   const toast = useToast();
@@ -140,8 +141,9 @@ export function LeaderboardPage({ backend, account, onSignIn }: Props) {
         </p>
       ) : (
         <ol className="lb-list">
-          {rows.map((r) => (
-            <li key={`${r.rank}-${r.name}`} className={`lb-row${r.me ? ' is-me' : ''}`}>
+          {rows.map((r, i) => (
+            // 不同信箱可能有一樣的前綴（例如 amy@gmail.com、amy@公司網域），用順序當 key
+            <li key={i} className={`lb-row${r.me ? ' is-me' : ''}`}>
               <span className={`lb-rank${r.rank <= 3 ? ` lb-rank--${r.rank}` : ''}`} aria-label={`第 ${r.rank} 名`}>
                 {r.rank}
               </span>

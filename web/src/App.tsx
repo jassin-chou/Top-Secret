@@ -10,6 +10,7 @@ import { Room } from './pages/Room';
 import { HistoryPage } from './pages/History';
 import { LeaderboardPage } from './pages/Leaderboard';
 import { MainBackend } from './lib/api';
+import { NicknameProvider } from './components/Nickname';
 import { PRACTICE_ME, practiceBackend, setPracticeRecorder } from './net/practiceBackend';
 
 export default function App() {
@@ -104,44 +105,46 @@ export default function App() {
   return (
     <ToastProvider>
       <MainBackend.Provider value={backend}>
-        <div className={`page${['start', 'new', 'setup', 'join', 'history', 'leaderboard'].includes(route.page) ? ' page--lobby' : ''}`}>
-          <header className="topbar">
-            <div className="topbar-inner">
-              <a href="#/" className="wordmark" aria-label={`${APP_NAME} ${APP_NAME_EN}，回首頁`}>
-                <span className="logo-tile">
-                  <Logo />
-                </span>
-                <span className="wordmark-zh">{APP_NAME}</span>
-                <span className="wordmark-en" lang="en">
-                  {APP_NAME_EN}
-                </span>
-              </a>
-              {backend?.mode === 'local' && <span className="mode-badge">本機測試模式</span>}
-              {backend?.mode === 'firebase' && import.meta.env.VITE_USE_EMULATORS === 'true' && (
-                <span className="mode-badge">Firebase 模擬器</span>
-              )}
-              {account && (
-                <nav className="top-actions" aria-label="帳號">
-                  <a href="#/leaderboard" className="top-link" aria-label="排行榜" aria-current={route.page === 'leaderboard' ? 'page' : undefined}>
-                    排行<span className="top-link-long">榜</span>
-                  </a>
-                  <a href="#/history" className="top-link" aria-label="對戰紀錄" aria-current={route.page === 'history' ? 'page' : undefined}>
-                    <span className="top-link-long">對戰</span>紀錄
-                  </a>
-                  {account.guest ? (
-                    <GoogleButton onSignIn={signIn} className="top-login" label="登入" />
-                  ) : (
-                    <a href="#/history" className="top-user" title={account.name ?? account.email ?? ''} aria-label="我的帳號">
-                      <Avatar account={account} size={34} />
+        <NicknameProvider>
+          <div className={`page${['start', 'new', 'setup', 'join', 'history', 'leaderboard'].includes(route.page) ? ' page--lobby' : ''}`}>
+            <header className="topbar">
+              <div className="topbar-inner">
+                <a href="#/" className="wordmark" aria-label={`${APP_NAME} ${APP_NAME_EN}，回首頁`}>
+                  <span className="logo-tile">
+                    <Logo />
+                  </span>
+                  <span className="wordmark-zh">{APP_NAME}</span>
+                  <span className="wordmark-en" lang="en">
+                    {APP_NAME_EN}
+                  </span>
+                </a>
+                {backend?.mode === 'local' && <span className="mode-badge">本機測試模式</span>}
+                {backend?.mode === 'firebase' && import.meta.env.VITE_USE_EMULATORS === 'true' && (
+                  <span className="mode-badge">Firebase 模擬器</span>
+                )}
+                {account && (
+                  <nav className="top-actions" aria-label="帳號">
+                    <a href="#/leaderboard" className="top-link" aria-label="排行榜" aria-current={route.page === 'leaderboard' ? 'page' : undefined}>
+                      排行<span className="top-link-long">榜</span>
                     </a>
-                  )}
-                </nav>
-              )}
-            </div>
-          </header>
-          <InAppNotice />
-          <main className="content">{body}</main>
-        </div>
+                    <a href="#/history" className="top-link" aria-label="對戰紀錄" aria-current={route.page === 'history' ? 'page' : undefined}>
+                      <span className="top-link-long">對戰</span>紀錄
+                    </a>
+                    {account.guest ? (
+                      <GoogleButton onSignIn={signIn} className="top-login" label="登入" />
+                    ) : (
+                      <a href="#/history" className="top-user" title={account.name ?? account.email ?? ''} aria-label="我的帳號">
+                        <Avatar account={account} size={34} />
+                      </a>
+                    )}
+                  </nav>
+                )}
+              </div>
+            </header>
+            <InAppNotice />
+            <main className="content">{body}</main>
+          </div>
+        </NicknameProvider>
       </MainBackend.Provider>
     </ToastProvider>
   );
