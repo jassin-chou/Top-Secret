@@ -1,6 +1,7 @@
 import {
   GameError,
   HISTORY_LIMIT,
+  withoutDetail,
   MODES,
   applyResult,
   nameFromEmail,
@@ -72,6 +73,7 @@ export const ACTIONS = [
   'rematch',
   'leave',
   'history',
+  'historyEntry',
   'record',
   'merge',
   'say',
@@ -220,7 +222,16 @@ export async function runAction(deps: ActionDeps, uid: string, action: ActionNam
     }
 
     case 'history': {
-      return { entries: await store.listHistory(uid, HISTORY_LIMIT) };
+      // 列表不帶逐步紀錄（點進去才拿），回應比較小
+      return { entries: (await store.listHistory(uid, HISTORY_LIMIT)).map(withoutDetail) };
+    }
+
+    case 'historyEntry': {
+      const id = String(body.id ?? '');
+      if (!/^(p-)?[A-Z0-9]{4,12}-\d{1,5}$/.test(id)) throw new GameError('BAD_REQUEST', '紀錄編號不正確');
+      const entry = await store.getHistory(uid, id);
+      if (!entry) throw new GameError('NOT_FOUND', '找不到這局的紀錄');
+      return { entry };
     }
 
     case 'profile': {

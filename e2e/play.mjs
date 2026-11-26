@@ -584,6 +584,16 @@ try {
   await Q.locator('.history-item').first().waitFor();
   await shot(Q, '21-history-signed-in');
 
+  step('點進練習的幾A幾B 紀錄：看得到雙方密碼和每一次猜測');
+  await Q.locator('a.history-item').first().click();
+  await Q.getByRole('heading', { name: /幾A幾B\s+對 電腦/ }).waitFor();
+  await Q.locator('.ab-codes', { hasText: '123' }).waitFor();
+  await Q.locator('.ab-codes', { hasText: botSecret }).waitFor();
+  await Q.locator('.ab-record .guess-table li').first().waitFor();
+  await shot(Q, '21b-record-ab');
+  await Q.getByRole('button', { name: '返回對戰紀錄' }).click();
+  await Q.getByRole('heading', { name: '對戰紀錄' }).waitFor();
+
   step('登出：變回新的訪客，看不到帳號的紀錄');
   await Q.getByRole('button', { name: '登出' }).click();
   await Q.getByRole('heading', { name: '你現在是訪客' }).waitFor();
@@ -595,6 +605,29 @@ try {
   await A.locator('.history-item--win', { hasText: '對 小華' }).nth(1).waitFor();
   await A.getByText('對手中途離開').waitFor();
   await shot(A, '22-history-online');
+
+  step('點進線上那局飛機版：雙方棋盤、可以一步一步重播');
+  await A.locator('a.history-item--win', { hasText: '飛機版' }).last().click();
+  await A.getByRole('heading', { name: /飛機版\s+對 小華/ }).waitFor();
+  const stepText = await A.locator('.replay-count').innerText();
+  const [, cur, all] = /第\s*(\d+)\s*\/\s*(\d+)/.exec(stepText) ?? [];
+  if (!all || cur !== all) throw new Error(`一開始要停在最後一步：${stepText}`);
+  if ((await A.locator('.replay-board').count()) !== 2) throw new Error('要有雙方兩個棋盤');
+  if ((await A.locator('.replay-board').first().locator('.plane--reveal').count()) === 0) throw new Error('對手的飛機位置要畫出來');
+  await A.locator('.replay-caption', { hasText: '命中機頭' }).waitFor();
+  await shot(A, '22b-record-plane');
+  await A.getByRole('button', { name: '回到開局' }).click();
+  await A.locator('.replay-count', { hasText: `第 0 / ${all} 步` }).waitFor();
+  if (await A.locator('.replay-board .shot').count()) throw new Error('開局時棋盤上不該有砲彈');
+  await A.locator('.replay-log .log-item').first().click();
+  await A.locator('.replay-count', { hasText: `第 1 / ${all} 步` }).waitFor();
+  await A.getByRole('button', { name: '下一步' }).click();
+  await A.locator('.replay-count', { hasText: `第 2 / ${all} 步` }).waitFor();
+  await A.getByRole('button', { name: '播放' }).click();
+  await A.locator('.replay-count', { hasText: `第 ${all} / ${all} 步` }).waitFor({ timeout: 15000 });
+  await A.getByRole('button', { name: '從頭播放' }).waitFor();
+  await A.goBack();
+  await A.getByRole('heading', { name: '對戰紀錄' }).waitFor();
 
   // ---------- 排行榜與獎牌 ----------
   step('排行榜：訪客 A 看得到登入提示，獎牌收藏裡已經有「初登場勝利」');

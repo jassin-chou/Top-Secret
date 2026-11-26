@@ -4,9 +4,30 @@
  */
 import { BOT_LEVELS, type BotLevel } from './bot.js';
 import { GameError } from './errors.js';
-import { opponentOf } from './engine.js';
-import { pieceCount } from './plane.js';
-import type { GameMode, GameRecord, Settings } from './types.js';
+import { normalizeSettings, opponentOf } from './engine.js';
+import { isBoardSettings, pieceCount, validatePlacement } from './plane.js';
+import type { GameMode, GameRecord, Guess, Plane, Settings, Shot, ShotResult } from './types.js';
+
+/** 一方在這局的完整資料（結束後才記，所以棋子位置、密碼都可以公開） */
+export interface SideDetail {
+  /** 飛機版、海戰棋：自己藏的飛機／船 */
+  pieces?: Plane[];
+  /** 飛機版、海戰棋：自己打出去的每一發（n 是全局順序） */
+  shots?: Shot[];
+  /** 幾A幾B：自己的密碼 */
+  code?: string;
+  /** 幾A幾B：自己猜的每一次 */
+  guesses?: Guess[];
+}
+
+/** 一局的詳細紀錄，可以在對戰紀錄裡一步一步重播 */
+export interface GameDetail {
+  settings: Settings;
+  /** 這局是不是我先攻 */
+  meFirst: boolean;
+  me: SideDetail;
+  opp: SideDetail;
+}
 
 export interface HistoryEntry {
   /** 線上：房號-局數；練習：p-練習代碼-局數。同一局重複寫入會覆蓋，不會變兩筆 */
@@ -34,6 +55,8 @@ export interface HistoryEntry {
   /** 飛機版：我的第一砲就打中機頭 */
   firstShotHead?: boolean;
   finishedAt: number;
+  /** 逐步紀錄（加入這個功能之前打的局沒有） */
+  detail?: GameDetail;
 }
 
 export const HISTORY_LIMIT = 100;
@@ -76,7 +99,34 @@ export function historyEntryFor(
     if (g.settings.mode === 'plane') entry.firstShotHead = shots[0]?.r === 'head';
   }
   if (opts.level) entry.level = opts.level;
+  entry.detail = gameDetail(rec, uid, opp);
   return entry;
+}
+
+/** Firestore 不收 undefined：沒有的欄位就不要放 */
+function side(rec: GameRecord, id: string): SideDetail {
+  const g = rec.pub;
+  const out: SideDetail = {};
+  if (g.settings.mode === 'ab') {
+    const code = rec.priv[id]?.secret ?? g.codes?.[id];
+    if (code) out.code = code;
+    out.guesses = (g.guesses?.[id] ?? []).map(({ g: guess, a, b, n }) => ({ g: guess, a, b, n }));
+  } else {
+    const pieces = rec.priv[id]?.planes ?? g.reveal?.[id];
+    if (pieces?.length) out.pieces = pieces.map(({ x, y, dir }) => ({ x, y, dir }));
+    out.shots = (g.shots?.[id] ?? []).map(({ x, y, r, n, k }) => (k === undefined ? { x, y, r, n } : { x, y, r, n, k }));
+  }
+  return out;
+}
+
+export function gameDetail(rec: GameRecord, uid: string, opp: string): GameDetail {
+  return { settings: rec.pub.settings, meFirst: rec.pub.firstTurn === uid, me: side(rec, uid), opp: side(rec, opp) };
+}
+
+/** 列表只需要摘要；逐步紀錄等點進去再拿 */
+export function withoutDetail(entry: HistoryEntry): HistoryEntry {
+  const { detail: _detail, ...rest } = entry;
+  return rest;
 }
 
 /** 線上對戰結束時，雙方各一筆 */
@@ -130,5 +180,70 @@ export function normalizePracticeEntry(raw: unknown, now: number): HistoryEntry 
   };
   if (o.hits !== undefined && mode !== 'ab') entry.hits = count(o.hits, '命中數');
   if (BOT_LEVELS.includes(o.level as BotLevel)) entry.level = o.level as BotLevel;
+  const detail = normalizeDetail(o.detail, mode);
+  if (detail) entry.detail = detail;
   return entry;
+}
+
+// ---- 練習的逐步紀錄也是瀏覽器送來的：格式不對就整個不存（不影響紀錄本身） ----
+
+const SHOT_RESULTS: ShotResult[] = ['head', 'body', 'miss', 'hit', 'sunk'];
+const isInt = (v: unknown, min: number, max: number): v is number =>
+  typeof v === 'number' && Number.isInteger(v) && v >= min && v <= max;
+
+function normalizeSide(raw: unknown, settings: Settings): SideDetail | null {
+  const o = (raw ?? {}) as Record<string, unknown>;
+  const out: SideDetail = {};
+  if (settings.mode === 'ab') {
+    const digits = new RegExp(`^\\d{${settings.digits}}$`);
+    if (o.code !== undefined) {
+      if (typeof o.code !== 'string' || !digits.test(o.code)) return null;
+      out.code = o.code;
+    }
+    if (!Array.isArray(o.guesses) || o.guesses.length > 500) return null;
+    const guesses: Guess[] = [];
+    for (const raw of o.guesses as Array<Record<string, unknown>>) {
+      if (typeof raw?.g !== 'string' || !digits.test(raw.g)) return null;
+      if (!isInt(raw.a, 0, settings.digits) || !isInt(raw.b, 0, settings.digits) || !isInt(raw.n, 0, 100000)) return null;
+      guesses.push({ g: raw.g, a: raw.a, b: raw.b, n: raw.n });
+    }
+    out.guesses = guesses;
+    return out;
+  }
+  if (!isBoardSettings(settings)) return null;
+  if (o.pieces !== undefined) {
+    if (validatePlacement(o.pieces, settings)) return null;
+    out.pieces = (o.pieces as Plane[]).map(({ x, y, dir }) => ({ x, y, dir }));
+  }
+  const max = settings.size * settings.size;
+  if (!Array.isArray(o.shots) || o.shots.length > max) return null;
+  const shots: Shot[] = [];
+  for (const raw of o.shots as Array<Record<string, unknown>>) {
+    if (!isInt(raw?.x, 0, settings.size - 1) || !isInt(raw.y, 0, settings.size - 1)) return null;
+    if (!SHOT_RESULTS.includes(raw.r as ShotResult) || !isInt(raw.n, 0, 100000)) return null;
+    const shot: Shot = { x: raw.x, y: raw.y, r: raw.r as ShotResult, n: raw.n };
+    if (raw.k !== undefined) {
+      if (!isInt(raw.k, 0, pieceCount(settings) - 1)) return null;
+      shot.k = raw.k;
+    }
+    shots.push(shot);
+  }
+  out.shots = shots;
+  return out;
+}
+
+export function normalizeDetail(raw: unknown, mode: GameMode): GameDetail | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const o = raw as Record<string, unknown>;
+  let settings: Settings;
+  try {
+    settings = normalizeSettings(o.settings);
+  } catch {
+    return null;
+  }
+  if (settings.mode !== mode) return null;
+  const me = normalizeSide(o.me, settings);
+  const opp = normalizeSide(o.opp, settings);
+  if (!me || !opp) return null;
+  return { settings, meFirst: o.meFirst === true, me, opp };
 }

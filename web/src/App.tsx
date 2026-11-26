@@ -9,6 +9,7 @@ import { JoinStep, ModeStep, SetupStep, StartStep } from './pages/Lobby';
 import { Room } from './pages/Room';
 import { HistoryPage } from './pages/History';
 import { LeaderboardPage } from './pages/Leaderboard';
+import { GameRecordPage } from './pages/GameRecord';
 import { MainBackend } from './lib/api';
 import { NicknameProvider } from './components/Nickname';
 import { PRACTICE_ME, practiceBackend, setPracticeRecorder } from './net/practiceBackend';
@@ -96,6 +97,8 @@ export default function App() {
     body = <p className="loading">連線中…</p>;
   } else if (route.page === 'leaderboard') {
     body = <LeaderboardPage backend={backend} account={account} onSignIn={signIn} />;
+  } else if (route.page === 'record') {
+    body = <GameRecordPage key={route.id} backend={backend} id={route.id} navigate={navigate} />;
   } else if (route.page === 'history') {
     body = <HistoryPage backend={backend} account={account} onSignIn={signIn} onSignOut={signOut} navigate={navigate} />;
   } else {
@@ -106,7 +109,7 @@ export default function App() {
     <ToastProvider>
       <MainBackend.Provider value={backend}>
         <NicknameProvider>
-          <div className={`page${['start', 'new', 'setup', 'join', 'history', 'leaderboard'].includes(route.page) ? ' page--lobby' : ''}`}>
+          <div className={`page${['start', 'new', 'setup', 'join', 'history', 'record', 'leaderboard'].includes(route.page) ? ' page--lobby' : ''}`}>
             <header className="topbar">
               <div className="topbar-inner">
                 <a href="#/" className="wordmark" aria-label={`${APP_NAME} ${APP_NAME_EN}，回首頁`}>
@@ -127,7 +130,7 @@ export default function App() {
                     <a href="#/leaderboard" className="top-link" aria-label="排行榜" aria-current={route.page === 'leaderboard' ? 'page' : undefined}>
                       排行<span className="top-link-long">榜</span>
                     </a>
-                    <a href="#/history" className="top-link" aria-label="對戰紀錄" aria-current={route.page === 'history' ? 'page' : undefined}>
+                    <a href="#/history" className="top-link" aria-label="對戰紀錄" aria-current={route.page === 'history' || route.page === 'record' ? 'page' : undefined}>
                       <span className="top-link-long">對戰</span>紀錄
                     </a>
                     {account.guest ? (

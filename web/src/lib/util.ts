@@ -30,6 +30,7 @@ export type Route =
   | { page: 'room'; code: string }
   | { page: 'practice'; code: string }
   | { page: 'history' }
+  | { page: 'record'; id: string }
   | { page: 'leaderboard' };
 
 /**
@@ -40,6 +41,7 @@ export type Route =
  *   #/join        輸入房號加入
  *   #/r/房號      線上房間；#/p/代碼 跟電腦練習
  *   #/history     對戰紀錄與帳號
+ *   #/history/編號 一局的詳細紀錄（重播）
  *   #/leaderboard 排行榜與獎牌
  */
 export function parseRoute(hash: string): Route {
@@ -49,6 +51,8 @@ export function parseRoute(hash: string): Route {
   if (setup) return { page: 'setup', mode: setup[1] as 'plane' | 'ship' | 'ab' };
   if (/^#\/new\b/.test(hash)) return { page: 'new' };
   if (/^#\/join\b/.test(hash)) return { page: 'join' };
+  const record = /^#\/history\/([A-Za-z0-9-]+)/.exec(hash);
+  if (record) return { page: 'record', id: record[1] };
   if (/^#\/history\b/.test(hash)) return { page: 'history' };
   if (/^#\/leaderboard\b/.test(hash)) return { page: 'leaderboard' };
   return { page: 'start' };

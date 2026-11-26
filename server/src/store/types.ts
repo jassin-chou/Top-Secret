@@ -13,6 +13,8 @@ export interface GameStore {
   addHistory(uid: string, entry: HistoryEntry): Promise<void>;
   /** 最新的在前面 */
   listHistory(uid: string, limit: number): Promise<HistoryEntry[]>;
+  /** 一筆對戰紀錄（含逐步紀錄）；找不到回傳 null */
+  getHistory(uid: string, id: string): Promise<HistoryEntry | null>;
   /** 戰績與獎牌；沒有資料時回傳 null */
   getStats(uid: string): Promise<PlayerStats | null>;
   /** 原子性地更新戰績（fn 必須是純函式） */

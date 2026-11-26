@@ -25,7 +25,7 @@ import { useCoarsePointer, useSessionState } from '../lib/util';
 import type { Act } from './Room';
 
 /** 一發的結果文字；onMe = 這一發是打在我的棋盤上 */
-function resultText(shot: Pick<Shot, 'r' | 'k'>, settings: BoardSettings, onMe = false): string {
+export function resultText(shot: Pick<Shot, 'r' | 'k'>, settings: BoardSettings, onMe = false): string {
   const your = onMe ? '你的' : '';
   switch (shot.r) {
     case 'head':

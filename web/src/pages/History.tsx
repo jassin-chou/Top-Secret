@@ -185,25 +185,30 @@ export function HistoryPage({ backend, account, onSignIn, onSignOut, navigate }:
           ) : (
             <ol className="history-list">
               {shown.map((e) => (
-                <li key={e.id} className={`history-item history-item--${e.result}`}>
-                  <span className="history-stamp" aria-label={e.result === 'win' ? '贏' : '輸'}>
-                    {e.result === 'win' ? '勝' : '敗'}
-                  </span>
-                  <div className="history-main">
-                    <p className="history-title">
-                      <span className="history-mode">{MODE_NAME[e.mode]}</span>
-                      <span>對 {e.vs === 'bot' ? shortName(e.oppName) : e.oppName}</span>
-                      {e.vs === 'bot' && <span className="history-tag">練習{e.level ? `（${BOT_LEVEL_NAME[e.level]}）` : ''}</span>}
-                    </p>
-                    <p className="history-meta">
-                      {e.summary}
-                      {e.moves > 0 && `，${statsText(e)}`}
-                      {forfeitText(e) && <span className="history-forfeit">{forfeitText(e)}</span>}
-                    </p>
-                  </div>
-                  <time className="history-time" dateTime={new Date(e.finishedAt).toISOString()}>
-                    {when(e.finishedAt)}
-                  </time>
+                <li key={e.id}>
+                  <a href={`#/history/${e.id}`} className={`history-item history-item--${e.result}`}>
+                    <span className="history-stamp" aria-label={e.result === 'win' ? '贏' : '輸'}>
+                      {e.result === 'win' ? '勝' : '敗'}
+                    </span>
+                    <div className="history-main">
+                      <p className="history-title">
+                        <span className="history-mode">{MODE_NAME[e.mode]}</span>
+                        <span>對 {e.vs === 'bot' ? shortName(e.oppName) : e.oppName}</span>
+                        {e.vs === 'bot' && <span className="history-tag">練習{e.level ? `（${BOT_LEVEL_NAME[e.level]}）` : ''}</span>}
+                      </p>
+                      <p className="history-meta">
+                        {e.summary}
+                        {e.moves > 0 && `，${statsText(e)}`}
+                        {forfeitText(e) && <span className="history-forfeit">{forfeitText(e)}</span>}
+                      </p>
+                    </div>
+                    <time className="history-time" dateTime={new Date(e.finishedAt).toISOString()}>
+                      {when(e.finishedAt)}
+                    </time>
+                    <span className="history-go" aria-hidden="true">
+                      ›
+                    </span>
+                  </a>
                 </li>
               ))}
             </ol>

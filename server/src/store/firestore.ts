@@ -51,6 +51,11 @@ export class FirestoreStore implements GameStore {
     await this.historyCol(uid).doc(entry.id).set(entry);
   }
 
+  async getHistory(uid: string, id: string): Promise<HistoryEntry | null> {
+    const snap = await this.historyCol(uid).doc(id).get();
+    return snap.exists ? (snap.data() as HistoryEntry) : null;
+  }
+
   async listHistory(uid: string, limit: number): Promise<HistoryEntry[]> {
     const snap = await this.historyCol(uid).orderBy('finishedAt', 'desc').limit(limit).get();
     return snap.docs.map((d) => d.data() as HistoryEntry);

@@ -150,7 +150,7 @@ type Note = 'no' | 'yes';
 const NOTE_NEXT: Record<string, Note | undefined> = { none: 'no', no: 'yes', yes: undefined };
 const NOTE_LABEL: Record<string, string> = { none: '', no: '確定沒有', yes: '確定有' };
 
-function GuessTable({ guesses, label, empty, highlight }: { guesses: Guess[]; label: string; empty: string; highlight?: number }) {
+export function GuessTable({ guesses, label, empty, highlight }: { guesses: Guess[]; label: string; empty: string; highlight?: number }) {
   return (
     <div className="guess-table">
       <h3>{label}</h3>

@@ -3121,7 +3121,7 @@ html.is-poked .content {
 
 .history-item {
   display: grid;
-  grid-template-columns: 44px minmax(0, 1fr) auto;
+  grid-template-columns: 44px minmax(0, 1fr) auto 1em;
   align-items: center;
   gap: 14px;
   padding: 12px 0;
@@ -3469,12 +3469,18 @@ html.is-poked .content {
   }
 
   .history-item {
-    grid-template-columns: 40px minmax(0, 1fr);
+    grid-template-columns: 40px minmax(0, 1fr) 1em;
   }
 
   .history-time {
     grid-column: 2;
+    grid-row: 2;
     margin-top: -8px;
+  }
+
+  .history-go {
+    grid-column: 3;
+    grid-row: 1 / span 2;
   }
 
   .logo-tile {
@@ -3939,4 +3945,249 @@ html.is-poked .content {
   gap: 8px 10px;
   margin: 0;
   color: var(--muted);
+}
+
+/* ---------- 對戰紀錄：可以點進去 ---------- */
+
+a.history-item {
+  color: inherit;
+  text-decoration: none;
+  padding-left: 6px;
+  padding-right: 6px;
+}
+
+a.history-item:hover {
+  background: var(--paper-board);
+}
+
+a.history-item:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
+.history-go {
+  font-size: var(--step-1);
+  line-height: 1;
+  color: var(--grid-strong);
+  justify-self: end;
+}
+
+/* ---------- 一局的詳細紀錄 ---------- */
+
+.record {
+  display: grid;
+  gap: 20px;
+  max-width: var(--lobby-w);
+  margin: 0 auto;
+  padding-top: 16px;
+}
+
+.record > .step-back {
+  justify-self: start;
+}
+
+.record-head {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
+.record-head .room-title {
+  margin: 0;
+}
+
+.record-stamp {
+  flex: none;
+  width: 56px;
+  height: 56px;
+  font-size: 26px;
+}
+
+.record-missing {
+  padding: 16px 18px;
+  border: 1.5px dashed var(--grid-strong);
+  border-radius: var(--radius);
+  color: var(--muted);
+}
+
+.replay {
+  display: grid;
+  gap: 16px;
+}
+
+.replay-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 24px;
+}
+
+.replay-buttons {
+  display: flex;
+  gap: 6px;
+}
+
+.replay-buttons .btn {
+  min-width: 2.6em;
+}
+
+.replay-play {
+  min-width: 6.5em;
+}
+
+.replay-slider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1 1 260px;
+}
+
+.replay-slider input {
+  flex: 1;
+  accent-color: var(--ink);
+}
+
+.replay-count {
+  white-space: nowrap;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.replay-count b {
+  font-weight: 400;
+  color: var(--ink);
+  font-size: var(--step-1);
+}
+
+.replay-caption {
+  margin: 0;
+  padding: 8px 16px;
+  border-radius: 999px;
+  background: var(--paper-board);
+  border: 1.5px solid var(--grid);
+  color: var(--text);
+}
+
+.replay-caption--head,
+.replay-caption--sunk {
+  border-color: var(--red);
+  color: var(--red);
+}
+
+.replay-boards {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 32px;
+  align-items: start;
+}
+
+.replay-board {
+  margin: 0;
+}
+
+.replay-board figcaption {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px 12px;
+  margin-bottom: 6px;
+  color: var(--ink);
+  font-size: var(--step-1);
+}
+
+.replay-board figcaption .muted {
+  font-size: var(--step--1);
+}
+
+.replay-log {
+  max-width: 520px;
+}
+
+.replay-log ol {
+  max-height: 20rem;
+}
+
+.replay-log li {
+  display: block;
+}
+
+.replay-log .log-item {
+  width: 100%;
+  grid-template-columns: 2em minmax(0, 1fr) 3em minmax(6em, max-content);
+  font: inherit;
+  font-size: var(--step--1);
+  text-align: left;
+  color: inherit;
+  background: none;
+  border: none;
+  border-bottom: 1px solid var(--grid);
+  padding: 4px 6px;
+  cursor: pointer;
+}
+
+.replay-log .log-item:hover {
+  background: var(--paper-board);
+}
+
+.replay-log .log-item.is-current {
+  background: rgba(242, 229, 92, 0.45);
+}
+
+.log-no {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.ab-codes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 40px;
+  margin: 0;
+}
+
+.ab-codes dt {
+  font-size: var(--step--1);
+  color: var(--muted);
+}
+
+.ab-codes dd {
+  margin: 0;
+  font-size: var(--step-2);
+  letter-spacing: 0.15em;
+  color: var(--ink);
+}
+
+.ab-record {
+  display: grid;
+  gap: 16px;
+}
+
+.ab-record-tables {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 32px;
+  align-items: start;
+}
+
+@media (max-width: 640px) {
+  .replay-boards,
+  .ab-record-tables {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 20px;
+  }
+
+  .record-head {
+    gap: 12px;
+  }
+
+  .record-stamp {
+    width: 46px;
+    height: 46px;
+    font-size: 21px;
+  }
+
+  .replay-caption {
+    border-radius: 14px;
+  }
 }

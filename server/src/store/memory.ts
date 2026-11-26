@@ -46,6 +46,11 @@ export class MemoryStore implements ObservableStore {
     return structuredClone(all.sort((a, b) => b.finishedAt - a.finishedAt).slice(0, limit));
   }
 
+  async getHistory(uid: string, id: string): Promise<HistoryEntry | null> {
+    const e = this.history.get(uid)?.get(id);
+    return e ? structuredClone(e) : null;
+  }
+
   async getStats(uid: string): Promise<PlayerStats | null> {
     const s = this.stats.get(uid);
     return s ? structuredClone(s) : null;

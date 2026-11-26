@@ -218,6 +218,20 @@ test('match history is written for both players and practice results can be save
   assert.equal(hd[0].result, 'lose');
   assert.equal(hd[0].id, hc[0].id);
 
+  // 列表不帶逐步紀錄；點進去才拿得到，而且雙方密碼、每一次猜測都在
+  assert.equal('detail' in hc[0], false);
+  type One = { entry: { detail: { meFirst: boolean; me: { code: string; guesses: Array<{ g: string; a: number }> }; opp: { code: string; guesses: unknown[] } } } };
+  const one = (await c<One>('historyEntry', { id: hc[0].id })).entry.detail;
+  assert.equal(one.meFirst, cFirst);
+  assert.equal(one.me.code, '123');
+  assert.equal(one.opp.code, '987');
+  assert.deepEqual(one.me.guesses.map((g) => [g.g, g.a]), [['987', 3]]);
+  assert.equal(one.opp.guesses.length, cFirst ? 0 : 1);
+  const theirs = (await d<One>('historyEntry', { id: hc[0].id })).entry.detail;
+  assert.equal(theirs.me.code, '987');
+  await assert.rejects(d('historyEntry', { id: 'ZZZZZZ-1' }), { code: 'NOT_FOUND' });
+  await assert.rejects(d('historyEntry', { id: '../x' }), { code: 'BAD_REQUEST' });
+
   // 再來一局後中途離開：判負也要留紀錄，而且是另一筆
   await c('rematch', { gameId });
   await d('rematch', { gameId });
@@ -241,6 +255,19 @@ test('match history is written for both players and practice results can be save
   assert.equal(hc3[0].vs, 'bot');
   assert.equal(hc3[0].level, 'hard');
   assert.equal('hacked' in hc3[0], false);
+  // 練習的逐步紀錄：格式正確才存，不正確就只存摘要
+  const mini = { name: '迷你機', cells: [{ x: 0, y: 0 }, { x: 0, y: 1 }, { x: -1, y: 1 }, { x: 1, y: 1 }, { x: 0, y: 2 }] };
+  const detail = {
+    settings: { mode: 'plane', size: 5, planes: 1, shape: mini },
+    meFirst: true,
+    me: { pieces: [{ x: 2, y: 0, dir: 'up' }], shots: [{ x: 0, y: 0, r: 'miss', n: 1 }] },
+    opp: { pieces: [{ x: 2, y: 0, dir: 'up' }], shots: [{ x: 2, y: 0, r: 'head', n: 2 }] },
+  };
+  type Full = { entry: { detail?: { me: { shots: unknown[] } } } };
+  await c('record', { entry: { ...entry, gameId: 'DET234', detail } });
+  assert.equal((await c<Full>('historyEntry', { id: 'p-DET234-1' })).entry.detail?.me.shots.length, 1);
+  await c('record', { entry: { ...entry, gameId: 'BAD234', detail: { ...detail, me: { shots: [{ x: 99, y: 0, r: 'miss', n: 1 }] } } } });
+  assert.equal((await c<Full>('historyEntry', { id: 'p-BAD234-1' })).entry.detail, undefined);
   await assert.rejects(c('record', { entry: { ...entry, mode: 'chess' } }), { code: 'BAD_REQUEST' });
   await assert.rejects(c('record', { entry: { ...entry, moves: -1 } }), { code: 'BAD_REQUEST' });
 });
