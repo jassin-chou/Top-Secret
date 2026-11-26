@@ -139,6 +139,16 @@ test('leaderboard: Google players with enough games, best win rate first', () =>
   );
   assert.deepEqual(rows[0].medals, ['streak_10', 'first_win']);
   assert.equal(rankPlayers([{ uid: 'a', stats: mk('amy', true, 6, 10) }], 'plane', null).length, 0);
+  // 總場數夠了，就算某個玩法只打過 1 場，那個玩法的榜也會列出來
+  const mixed = mk('max', true, 2, 3);
+  mixed.modes = {
+    plane: { games: 1, wins: 1, streak: 1, bestStreak: 1 },
+    ship: { games: 1, wins: 0, streak: 0, bestStreak: 0 },
+    ab: { games: 1, wins: 1, streak: 1, bestStreak: 1 },
+  };
+  for (const scope of ['plane', 'ship', 'ab'] as const) {
+    assert.deepEqual(rankPlayers([{ uid: 'm', stats: mixed }], scope, null).map((r) => [r.name, r.games]), [['max', 1]]);
+  }
   assert.equal(nameFromEmail('jassin.chou@gmail.com'), 'jassin.chou');
   assert.deepEqual(sortMedals(['first_win', 'nope', 'bot_master']), ['bot_master', 'first_win']);
 });

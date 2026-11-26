@@ -623,7 +623,7 @@ try {
   await G.locator('.medal-card.is-earned', { hasText: '好人緣' }).count();
   await shot(G, '23-leaderboard');
   await G.getByRole('button', { name: '飛機版' }).click();
-  await G.getByText('飛機版還沒有人上榜').waitFor();
+  await G.getByText('上榜的人裡還沒有人跟真人玩過飛機版').waitFor();
   await G.getByRole('button', { name: '幾A幾B' }).click();
   await G.locator('.lb-row.is-me').waitFor();
   await G.setViewportSize({ width: 390, height: 844 });

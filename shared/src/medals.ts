@@ -323,9 +323,11 @@ export function rankPlayers(
         ...r,
         exact: r.games ? r.wins / r.games : 0,
         medals: sortMedals(Object.keys(p.stats.medals)),
+        total: p.stats.games,
       };
     })
-    .filter((r) => r.games >= MIN_RANKED_GAMES)
+    // 上榜門檻看「跟真人的總場數」；分玩法的榜只要打過那個玩法就列出來
+    .filter((r) => r.total >= MIN_RANKED_GAMES && r.games > 0)
     .sort((a, b) => b.exact - a.exact || b.wins - a.wins || b.games - a.games || a.name.localeCompare(b.name));
 
   let rank = 0;

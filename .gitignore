@@ -15,3 +15,6 @@ server/.vercel-fn/
 # Firebase 服務帳戶金鑰絕對不要放進 Git
 *firebase-adminsdk*.json
 service-account*.json
+
+.vercel
+.env*

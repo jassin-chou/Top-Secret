@@ -79,7 +79,7 @@ export function LeaderboardPage({ backend, account, onSignIn }: Props) {
     <section className="leaderboard">
       <header className="history-head">
         <h1 className="room-title">排行榜</h1>
-        <p className="hint">只算跟真人的對戰，跟電腦練習不算。用 Google 登入、跟真人打滿 {MIN_RANKED_GAMES} 場就會上榜。</p>
+        <p className="hint">只算跟真人的對戰，跟電腦練習不算。用 Google 登入、跟真人打滿 {MIN_RANKED_GAMES} 場（三種玩法合計）就會上榜，玩過的玩法也會出現在那個玩法的榜上。</p>
       </header>
 
       {guest ? (
@@ -134,7 +134,9 @@ export function LeaderboardPage({ backend, account, onSignIn }: Props) {
         <p className="loading">讀取排行榜中…</p>
       ) : rows.length === 0 ? (
         <p className="history-empty">
-          {scope === 'all' ? '還沒有人上榜。' : `${MODE_NAME[scope]}還沒有人上榜。`}找朋友打滿 {MIN_RANKED_GAMES} 場，你就是第一名！
+          {scope === 'all'
+            ? `還沒有人上榜。找朋友打滿 ${MIN_RANKED_GAMES} 場，你就是第一名！`
+            : `上榜的人裡還沒有人跟真人玩過${MODE_NAME[scope]}。`}
         </p>
       ) : (
         <ol className="lb-list">
